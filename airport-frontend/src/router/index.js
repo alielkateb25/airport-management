@@ -24,7 +24,7 @@ const routes = [
         path: 'airports',
         name: 'AdminAirports',
         component: () => import('../views/admin/Airports.vue')
-      },/* 
+      },
       {
         path: 'airlines',
         name: 'AdminAirlines',
@@ -49,12 +49,12 @@ const routes = [
         path: 'users',
         name: 'AdminUsers',
         component: () => import('../views/admin/Users.vue')
-      }, */
+      },
     ]
   },
 
   // Staff Routes
-  /* {
+  {
     path: '/staff',
     component: () => import('../layouts/StaffLayout.vue'),
     meta: { requiresAuth: true, roles: ['admin', 'staff'] },
@@ -114,7 +114,7 @@ const routes = [
         component: () => import('../views/agent/Passengers.vue')
       },
     ]
-  }, */
+  },
 
   // Redirect root to login
   {
@@ -126,6 +126,11 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     redirect: '/login'
+  },
+  {
+        path: "/:notFound(.*)",
+        name: "error.404",
+        component: import('../error/NotFoundPage.vue'),
   }
 ]
 
