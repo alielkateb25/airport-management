@@ -24,8 +24,7 @@
 - [User Roles](#user-roles)
 - [API Endpoints](#api-endpoints)
 - [Screenshots](#screenshots)
-- [Contributing](#contributing)
-- [License](#license)
+
 
 ---
 
@@ -193,21 +192,6 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173`
 
-### 4. Create Admin User
-
-```bash
-php artisan tinker
-
-# In tinker console
-User::create([
-    'name' => 'Admin User',
-    'email' => 'admin@skyops.com',
-    'password' => bcrypt('password'),
-    'role' => 'admin',
-    'is_active' => true
-]);
-```
-
 ---
 
 ## 🗄️ Database Structure
@@ -258,19 +242,7 @@ User::create([
 
 ### Entity Relationships
 
-```
-Users (1) ──> (N) Bookings
-Passengers (1) ──> (N) Bookings
-Flights (1) ──> (N) Bookings
-Bookings (1) ──> (1) Payments
-
-Airlines (1) ──> (N) Aircraft
-Airlines (1) ──> (N) Flights
-Aircraft (1) ──> (N) Flights
-
-Airports (1) ──> (N) Flights (Origin)
-Airports (1) ──> (N) Flights (Destination)
-```
+<img width="760" height="777" alt="image" src="https://github.com/user-attachments/assets/2d938422-1110-443f-84f0-e9a36375f72a" />
 
 ---
 
@@ -283,14 +255,14 @@ Airports (1) ──> (N) Flights (Destination)
 - View all reports and analytics
 - System configuration
 
-### 🟡 Staff
+### 🟡 Staff (In Progress)
 **Operations management**
 - Manage flights and schedules
 - View bookings and passengers
 - Handle flight operations
 - Limited administrative access
 
-### 🟢 Agent
+### 🟢 Agent (In Progress)
 **Booking and customer service**
 - Create and manage bookings
 - Register passengers
@@ -369,17 +341,13 @@ DELETE /api/admin/users/:id    # Delete user
 
 ## 📸 Screenshots
 
-### Dashboard
+### Admin Dashboard
 > Real-time statistics and system overview
+<img width="1680" height="886" alt="image" src="https://github.com/user-attachments/assets/7a419efa-3726-44be-ac3d-f04c85ecf963" />
 
 ### Flight Management
 > Create, schedule, and manage flights
-
-### Booking System
-> Process bookings with seat selection
-
-### Admin Panel
-> Comprehensive system administration
+<img width="1468" height="609" alt="image" src="https://github.com/user-attachments/assets/7cf54aea-dee0-4614-b156-7e8ba2192e1d" />
 
 ---
 
@@ -413,25 +381,6 @@ skyops-airport-management/
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Coding Standards
-- Follow PSR-12 for PHP code
-- Use ESLint configuration for JavaScript
-- Write meaningful commit messages
-- Add comments for complex logic
-- Update documentation as needed
-
----
-
 ## 🐛 Bug Reports
 
 If you discover a bug, please create an issue with:
@@ -443,40 +392,15 @@ If you discover a bug, please create an issue with:
 
 ---
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
 ## 👨‍💻 Author
 
 **Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
-
----
-
-## 🙏 Acknowledgments
-
-- Laravel Framework Team
-- Vue.js Core Team
-- Open Source Community
-- All Contributors
-
----
-
-## 📞 Support
-
-For support and questions:
-- 📧 Email: support@skyops.com
-- 💬 Discord: [Join our server](https://discord.gg/skyops)
-- 📖 Documentation: [docs.skyops.com](https://docs.skyops.com)
+- GitHub: [@alielkateb25](https://github.com/alielkateb25)
+- Email: elkatebali777@gmail.com@example.com
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ by the SkyOps Team</p>
+  <p>Made with ❤️ by Me</p>
   <p>⭐ Star this repository if you find it helpful!</p>
 </div>
-```
