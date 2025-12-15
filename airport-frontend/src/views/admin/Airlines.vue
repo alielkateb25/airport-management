@@ -1,33 +1,23 @@
 <template>
   <div>
     <div class="page-header">
-      <h2 class="page-title">Aircraft Management</h2>
+      <h2 class="page-title">Airlines Management</h2>
       <button @click="openCreateModal" class="btn btn-primary">
         <span>+</span>
-        Add Aircraft
+        Add Airline
       </button>
     </div>
 
     <!-- Search and Filters -->
     <div class="card filter-card">
-      <div class="filter-grid-3">
+      <div class="filter-grid">
         <input 
           v-model="searchQuery"
           @input="handleSearch"
           type="text"
-          placeholder="Search aircraft..."
+          placeholder="Search airlines by name or code..."
           class="form-control"
         />
-        <select 
-          v-model="airlineFilter"
-          @change="handleSearch"
-          class="form-control"
-        >
-          <option value="">All Airlines</option>
-          <option v-for="airline in globalDataStore.airlines" :key="airline.id" :value="airline.id">
-            {{ airline.name }}
-          </option>
-        </select>
         <select 
           v-model="statusFilter"
           @change="handleSearch"
@@ -35,63 +25,55 @@
         >
           <option value="">All Status</option>
           <option value="active">Active</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="retired">Retired</option>
+          <option value="inactive">Inactive</option>
         </select>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="globalDataStore.loading.aircraft" class="loading-state">
+    <div v-if="globalDataStore.loading.airlines" class="loading-state">
       <div class="spinner"></div>
-      <p>Loading aircraft...</p>
+      <p>Loading airlines...</p>
     </div>
 
-    <!-- Aircraft Table -->
+    <!-- Airlines Table -->
     <div v-else class="table-container">
       <table>
         <thead>
           <tr>
-            <th>Registration</th>
-            <th>Model</th>
-            <th>Airline</th>
-            <th>Capacity</th>
+            <th>Code</th>
+            <th>Airline Name</th>
+            <th>Country</th>
+            <th>Contact Email</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="aircraft in filteredAircraft" :key="aircraft.id">
+          <tr v-for="airline in filteredAirlines" :key="airline.id">
             <td>
-              <span class="code-badge aircraft-badge">{{ aircraft.registration_number }}</span>
+              <span class="code-badge airline-badge">{{ airline.code }}</span>
             </td>
             <td>
-              <strong>{{ aircraft.model }}</strong>
+              <strong>{{ airline.name }}</strong>
             </td>
-            <td>{{ aircraft.airline?.name }}</td>
+            <td>{{ airline.country }}</td>
             <td>
-              <div class="capacity-info">
-                <small>
-                  <span class="capacity-item">💺 {{ aircraft.capacity_economy }}</span>
-                  <span class="capacity-item">💼 {{ aircraft.capacity_business }}</span>
-                  <span class="capacity-item">👑 {{ aircraft.capacity_first }}</span>
-                </small>
-                <div class="capacity-total">
-                  Total: <strong>{{ getTotalCapacity(aircraft) }}</strong>
-                </div>
-              </div>
+              <a :href="`mailto:${airline.contact_email}`" class="email-link">
+                {{ airline.contact_email || 'N/A' }}
+              </a>
             </td>
             <td>
-              <span class="badge" :class="getStatusClass(aircraft.status)">
-                {{ aircraft.status }}
+              <span class="badge" :class="airline.status === 'active' ? 'badge-success' : 'badge-danger'">
+                {{ airline.status }}
               </span>
             </td>
             <td>
               <div class="action-buttons">
-                <button @click="openEditModal(aircraft)" class="btn-icon btn-edit" title="Edit">
+                <button @click="openEditModal(airline)" class="btn-icon btn-edit" title="Edit">
                   ✏️
                 </button>
-                <button @click="deleteAircraftHandler(aircraft.id)" class="btn-icon btn-delete" title="Delete">
+                <button @click="deleteAirlineHandler(airline.id)" class="btn-icon btn-delete" title="Delete">
                   🗑️
                 </button>
               </div>
@@ -101,86 +83,66 @@
       </table>
 
       <!-- Empty State -->
-      <div v-if="filteredAircraft.length === 0" class="empty-state">
-        <div class="empty-icon">🛩️</div>
-        <p>No aircraft found</p>
-        <button @click="openCreateModal" class="btn btn-primary">Add First Aircraft</button>
+      <div v-if="filteredAirlines.length === 0" class="empty-state">
+        <div class="empty-icon">✈️</div>
+        <p>No airlines found</p>
+        <button @click="openCreateModal" class="btn btn-primary">Add First Airline</button>
       </div>
     </div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-content modal-large">
+      <div class="modal-content">
         <div class="modal-header">
-          <h2>{{ isEditing ? 'Edit Aircraft' : 'Add New Aircraft' }}</h2>
+          <h2>{{ isEditing ? 'Edit Airline' : 'Add New Airline' }}</h2>
           <button @click="closeModal" class="close-btn">✕</button>
         </div>
         
         <form @submit.prevent="handleSubmit">
           <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Airline Code (IATA) *</label>
+              <input 
+                v-model="form.code"
+                type="text"
+                maxlength="2"
+                class="form-control"
+                placeholder="e.g., AA"
+                required
+                @input="form.code = form.code.toUpperCase()"
+              />
+              <small class="form-hint">2-letter airline code</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Country *</label>
+              <input 
+                v-model="form.country"
+                type="text"
+                class="form-control"
+                placeholder="e.g., USA"
+                required
+              />
+            </div>
+
             <div class="form-group full-width">
-              <label class="form-label">Airline *</label>
-              <select v-model="form.airline_id" class="form-control" required>
-                <option value="">Select Airline</option>
-                <option v-for="airline in globalDataStore.airlines" :key="airline.id" :value="airline.id">
-                  {{ airline.name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Aircraft Model *</label>
+              <label class="form-label">Airline Name *</label>
               <input 
-                v-model="form.model"
+                v-model="form.name"
                 type="text"
                 class="form-control"
-                placeholder="e.g., Boeing 737-800"
+                placeholder="e.g., American Airlines"
                 required
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Registration Number *</label>
+            <div class="form-group full-width">
+              <label class="form-label">Contact Email</label>
               <input 
-                v-model="form.registration_number"
-                type="text"
+                v-model="form.contact_email"
+                type="email"
                 class="form-control"
-                placeholder="e.g., N12345"
-                required
-                @input="form.registration_number = form.registration_number.toUpperCase()"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Economy Seats *</label>
-              <input 
-                v-model.number="form.capacity_economy"
-                type="number"
-                min="0"
-                class="form-control"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Business Seats *</label>
-              <input 
-                v-model.number="form.capacity_business"
-                type="number"
-                min="0"
-                class="form-control"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">First Class Seats *</label>
-              <input 
-                v-model.number="form.capacity_first"
-                type="number"
-                min="0"
-                class="form-control"
-                required
+                placeholder="contact@airline.com"
               />
             </div>
 
@@ -188,14 +150,9 @@
               <label class="form-label">Status *</label>
               <select v-model="form.status" class="form-control" required>
                 <option value="active">Active</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="retired">Retired</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
-          </div>
-
-          <div class="capacity-summary">
-            <strong>Total Capacity: {{ getTotalFormCapacity() }} seats</strong>
           </div>
 
           <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -222,96 +179,64 @@ const globalDataStore = useGlobalDataStore()
 
 const showModal = ref(false)
 const isEditing = ref(false)
-const currentAircraftId = ref(null)
+const currentAirlineId = ref(null)
 const searchQuery = ref('')
-const airlineFilter = ref('')
 const statusFilter = ref('')
 const submitting = ref(false)
 const error = ref(null)
 
 const form = ref({
-  airline_id: '',
-  model: '',
-  registration_number: '',
-  capacity_economy: 0,
-  capacity_business: 0,
-  capacity_first: 0,
+  code: '',
+  name: '',
+  country: '',
+  contact_email: '',
   status: 'active'
 })
 
-const filteredAircraft = computed(() => {
-  let aircraft = [...globalDataStore.aircraft]
+// Computed filtered airlines based on search and filters
+const filteredAirlines = computed(() => {
+  let airlines = [...globalDataStore.airlines]
   
+  // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    aircraft = aircraft.filter(a => 
-      a.registration_number.toLowerCase().includes(query) ||
-      a.model.toLowerCase().includes(query)
+    airlines = airlines.filter(airline => 
+      airline.code.toLowerCase().includes(query) ||
+      airline.name.toLowerCase().includes(query) ||
+      airline.country.toLowerCase().includes(query)
     )
   }
   
-  if (airlineFilter.value) {
-    aircraft = aircraft.filter(a => a.airline_id == airlineFilter.value)
-  }
-  
+  // Apply status filter
   if (statusFilter.value) {
-    aircraft = aircraft.filter(a => a.status === statusFilter.value)
+    airlines = airlines.filter(airline => airline.status === statusFilter.value)
   }
   
-  return aircraft
+  return airlines
 })
 
 const handleSearch = () => {
-  console.log('Filtered aircraft:', filteredAircraft.value.length)
-}
-
-const getTotalCapacity = (aircraft) => {
-  return aircraft.capacity_economy + aircraft.capacity_business + aircraft.capacity_first
-}
-
-const getTotalFormCapacity = () => {
-  return (form.value.capacity_economy || 0) + 
-         (form.value.capacity_business || 0) + 
-         (form.value.capacity_first || 0)
-}
-
-const getStatusClass = (status) => {
-  const classes = {
-    'active': 'badge-success',
-    'maintenance': 'badge-warning',
-    'retired': 'badge-danger'
-  }
-  return classes[status] || 'badge-info'
+  console.log('Filtered airlines:', filteredAirlines.value.length)
 }
 
 const openCreateModal = () => {
   isEditing.value = false
-  currentAircraftId.value = null
+  currentAirlineId.value = null
   form.value = {
-    airline_id: '',
-    model: '',
-    registration_number: '',
-    capacity_economy: 0,
-    capacity_business: 0,
-    capacity_first: 0,
+    code: '',
+    name: '',
+    country: '',
+    contact_email: '',
     status: 'active'
   }
   error.value = null
   showModal.value = true
 }
 
-const openEditModal = (aircraft) => {
+const openEditModal = (airline) => {
   isEditing.value = true
-  currentAircraftId.value = aircraft.id
-  form.value = {
-    airline_id: aircraft.airline_id,
-    model: aircraft.model,
-    registration_number: aircraft.registration_number,
-    capacity_economy: aircraft.capacity_economy,
-    capacity_business: aircraft.capacity_business,
-    capacity_first: aircraft.capacity_first,
-    status: aircraft.status
-  }
+  currentAirlineId.value = airline.id
+  form.value = { ...airline }
   error.value = null
   showModal.value = true
 }
@@ -327,75 +252,49 @@ const handleSubmit = async () => {
   
   try {
     if (isEditing.value) {
-      const response = await axios.put(`/admin/aircraft/${currentAircraftId.value}`, form.value)
-      globalDataStore.updateItem('aircraft', currentAircraftId.value, response.data.data || form.value)
-      console.log('Aircraft updated:', response.data)
+      const response = await axios.put(`/admin/airlines/${currentAirlineId.value}`, form.value)
+      globalDataStore.updateItem('airlines', currentAirlineId.value, response.data.data || form.value)
+      console.log('Airline updated:', response.data)
     } else {
-      const response = await axios.post('/admin/aircraft', form.value)
-      globalDataStore.addItem('aircraft', response.data.data || { ...form.value, id: Date.now() })
-      console.log('Aircraft created:', response.data)
+      const response = await axios.post('/admin/airlines', form.value)
+      globalDataStore.addItem('airlines', response.data.data || { ...form.value, id: Date.now() })
+      console.log('Airline created:', response.data)
     }
     closeModal()
   } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to save aircraft'
+    error.value = err.response?.data?.message || 'Failed to save airline'
     console.error('Submit error:', err)
   } finally {
     submitting.value = false
   }
 }
 
-const deleteAircraftHandler = async (id) => {
-  if (!confirm('Are you sure you want to delete this aircraft?')) return
+const deleteAirlineHandler = async (id) => {
+  if (!confirm('Are you sure you want to delete this airline?')) return
   
   try {
-    await axios.delete(`/admin/aircraft/${id}`)
-    globalDataStore.removeItem('aircraft', id)
-    console.log('Aircraft deleted:', id)
+    await axios.delete(`/admin/airlines/${id}`)
+    globalDataStore.removeItem('airlines', id)
+    console.log('Airline deleted:', id)
   } catch (err) {
-    alert(err.response?.data?.message || 'Failed to delete aircraft')
+    alert(err.response?.data?.message || 'Failed to delete airline')
     console.error('Delete error:', err)
   }
 }
 </script>
 
 <style scoped>
-.aircraft-badge {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+.airline-badge {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
-.filter-grid-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-}
-
-.capacity-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.capacity-item {
-  margin-right: 12px;
-}
-
-.capacity-total {
-  font-size: 12px;
+.email-link {
   color: #667eea;
-  margin-top: 4px;
+  text-decoration: none;
 }
 
-.capacity-summary {
-  background: #f0f7ff;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  text-align: center;
-  color: #667eea;
-}
-
-.modal-large {
-  max-width: 700px;
+.email-link:hover {
+  text-decoration: underline;
 }
 
 .page-header {
@@ -414,6 +313,12 @@ const deleteAircraftHandler = async (id) => {
 
 .filter-card {
   margin-bottom: 24px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
 }
 
 .loading-state {
@@ -437,7 +342,7 @@ const deleteAircraftHandler = async (id) => {
   color: white;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .action-buttons {
@@ -501,9 +406,10 @@ const deleteAircraftHandler = async (id) => {
   background: white;
   border-radius: 12px;
   padding: 24px;
+  max-width: 600px;
+  width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  width: 90%;
 }
 
 .modal-header {
@@ -571,6 +477,13 @@ const deleteAircraftHandler = async (id) => {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
 .alert {
   padding: 12px 16px;
   border-radius: 8px;
@@ -635,19 +548,9 @@ const deleteAircraftHandler = async (id) => {
   color: #155724;
 }
 
-.badge-warning {
-  background: #fff3cd;
-  color: #856404;
-}
-
 .badge-danger {
   background: #f8d7da;
   color: #721c24;
-}
-
-.badge-info {
-  background: #d1ecf1;
-  color: #0c5460;
 }
 
 .table-container {

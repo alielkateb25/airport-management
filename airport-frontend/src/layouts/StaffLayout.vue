@@ -1,52 +1,97 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
-    <!-- Navigation Bar -->
-    <nav class="bg-green-600 text-white shadow-lg">
-      <div class="container mx-auto px-4">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center space-x-8">
-            <h1 class="text-2xl font-bold">✈️ Staff Portal</h1>
-            <div class="hidden md:flex space-x-6">
-              <router-link to="/staff/dashboard" class="hover:text-green-200 transition">
-                Dashboard
-              </router-link>
-              <router-link to="/staff/flights" class="hover:text-green-200 transition">
-                Flights
-              </router-link>
-              <router-link to="/staff/bookings" class="hover:text-green-200 transition">
-                Bookings
-              </router-link>
-              <router-link to="/staff/passengers" class="hover:text-green-200 transition">
-                Passengers
-              </router-link>
+  <div class="dashboard-container">
+    <aside class="sidebar sidebar-staff" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">✈️</span>
+          <span class="logo-text" v-show="!sidebarCollapsed">Staff Portal</span>
+        </div>
+        <button @click="toggleSidebar" class="toggle-btn">
+          <span v-if="sidebarCollapsed">→</span>
+          <span v-else>←</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <router-link to="/staff/dashboard" class="sidebar-link">
+          <span class="link-icon">📊</span>
+          <span class="link-text" v-show="!sidebarCollapsed">Dashboard</span>
+        </router-link>
+        
+        <router-link to="/staff/flights" class="sidebar-link">
+          <span class="link-icon">🛫</span>
+          <span class="link-text" v-show="!sidebarCollapsed">Flights</span>
+        </router-link>
+        
+        <router-link to="/staff/bookings" class="sidebar-link">
+          <span class="link-icon">🎫</span>
+          <span class="link-text" v-show="!sidebarCollapsed">Bookings</span>
+        </router-link>
+        
+        <router-link to="/staff/passengers" class="sidebar-link">
+          <span class="link-icon">👥</span>
+          <span class="link-text" v-show="!sidebarCollapsed">Passengers</span>
+        </router-link>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <header class="navbar navbar-staff">
+        <div class="navbar-left">
+          <h1 class="page-title">{{ pageTitle }}</h1>
+        </div>
+        
+        <div class="navbar-right">
+          <div class="user-menu">
+            <div class="user-info">
+              <span class="user-avatar staff-avatar">{{ userInitials }}</span>
+              <div class="user-details">
+                <span class="user-name">{{ authStore.userName }}</span>
+                <span class="user-email">{{ authStore.user?.email }}</span>
+              </div>
             </div>
-          </div>
-          
-          <div class="flex items-center space-x-4">
-            <span class="text-sm">{{ authStore.userName }}</span>
-            <span class="bg-green-500 px-3 py-1 rounded-full text-xs">Staff</span>
-            <button 
-              @click="handleLogout" 
-              class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded transition"
-            >
+            <button @click="handleLogout" class="logout-btn">
+              <span>🚪</span>
               Logout
             </button>
           </div>
         </div>
-      </div>
-    </nav>
+      </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
-      <router-view />
-    </main>
+      <main class="content-area">
+        <router-view />
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const sidebarCollapsed = ref(false)
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+const pageTitle = computed(() => {
+  const titles = {
+    'StaffDashboard': 'Dashboard',
+    'StaffFlights': 'Flights Management',
+    'StaffBookings': 'Bookings Management',
+    'StaffPassengers': 'Passengers Management'
+  }
+  return titles[route.name] || 'Staff Portal'
+})
+
+const userInitials = computed(() => {
+  const name = authStore.userName || 'User'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase()
+})
 
 const handleLogout = () => {
   if (confirm('Are you sure you want to logout?')) {
@@ -56,8 +101,200 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-.router-link-active {
-  font-weight: bold;
-  text-decoration: underline;
+/* Reuse AdminLayout styles but with different colors */
+.sidebar-staff {
+  background: linear-gradient(180deg, #16a085 0%, #1abc9c 100%);
+}
+
+.staff-avatar {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.navbar-staff {
+  border-bottom: 3px solid #1abc9c;
+}
+
+/* Copy all other styles from AdminLayout */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  background: #f5f7fa;
+}
+
+.sidebar {
+  width: 260px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  position: relative;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-collapsed {
+  width: 80px;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  margin: 4px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateX(5px);
+}
+
+.sidebar-link.router-link-active {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+}
+
+.link-icon {
+  font-size: 22px;
+  min-width: 22px;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.navbar {
+  background: white;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.user-email {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(235, 51, 73, 0.4);
+}
+
+.content-area {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  background: #f5f7fa;
 }
 </style>

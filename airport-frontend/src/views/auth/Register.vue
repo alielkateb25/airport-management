@@ -1,23 +1,32 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <!-- Left Side - Image -->
       <div class="login-image">
-          <img src="/woman-airport.jpg" alt="Airport" style="display: block; border-radius: 0;" />
+          <img src="/airport.jpg" alt="Airport" style="display: block; border-radius: 0;" />
         <!-- <div class="image-overlay">
-          <h1>✈️ Airport Management System</h1>
-          <p>Manage flights, bookings, and operations efficiently</p>
+          <h1>✈️ Join Our Team</h1>
+          <p>Create an account to get started</p>
         </div> -->
       </div>
 
-      <!-- Right Side - Form -->
       <div class="login-form">
         <div class="form-header">
-          <h2>Welcome Back</h2>
-          <p>Sign in to your account</p>
+          <h2>Create Account</h2>
+          <p>Fill in your details to register</p>
         </div>
 
-        <form @submit.prevent="handleLogin">
+        <form @submit.prevent="handleRegister">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input 
+              v-model="form.name"
+              type="text"
+              class="form-control"
+              placeholder="Enter your full name"
+              required
+            />
+          </div>
+
           <div class="form-group">
             <label class="form-label">Email Address</label>
             <input 
@@ -35,43 +44,51 @@
               v-model="form.password"
               type="password"
               class="form-control"
-              placeholder="Enter your password"
+              placeholder="Create a password"
               required
             />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input 
+              v-model="form.password_confirmation"
+              type="password"
+              class="form-control"
+              placeholder="Confirm your password"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select v-model="form.role" class="form-control" required>
+              <option value="agent">Agent</option>
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
 
           <div v-if="error" class="error-message">
             {{ error }}
           </div>
 
+          <div v-if="success" class="success-message">
+            {{ success }}
+          </div>
+
           <button 
             type="submit"
-            :disabled="authStore.loading"
+            :disabled="loading"
             class="btn-login"
           >
-            <span v-if="authStore.loading" class="spinner-small"></span>
-            <span v-else>Sign In</span>
+            <span v-if="loading" class="spinner-small"></span>
+            <span v-else>Create Account</span>
           </button>
         </form>
 
-        <div class="divider">
-          <span>Demo Accounts</span>
-        </div>
-
-        <div class="demo-accounts">
-          <button @click="fillDemo('admin')" class="demo-btn admin">
-            <span class="demo-icon">👨‍💼</span>
-            <div>
-              <strong>Admin</strong>
-              <small>admin@airport.com</small>
-            </div>
-          </button>
-
-          
-        </div>
-
         <div class="register-link">
-          Don't have an account? <router-link to="/register">Register here</router-link>
+          Already have an account? <router-link to="/login">Sign in here</router-link>
         </div>
       </div>
     </div>
@@ -80,43 +97,52 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useAuthStore } from '../../stores/auth'
+import { useRouter } from 'vue-router'
+import axios from '../../api/axios'
 
-const authStore = useAuthStore()
+const router = useRouter()
 
 const form = ref({
+  name: '',
   email: '',
-  password: ''
+  password: '',
+  password_confirmation: '',
+  role: 'agent'
 })
 
 const error = ref('')
+const success = ref('')
+const loading = ref(false)
 
-const handleLogin = async () => {
+const handleRegister = async () => {
   error.value = ''
+  success.value = ''
+  loading.value = true
   
   try {
-    await authStore.login(form.value)
+    await axios.post('/register', form.value)
+    success.value = 'Account created successfully! Redirecting to login...'
+    
+    setTimeout(() => {
+      router.push('/login')
+    }, 2000)
   } catch (err) {
-    console.error('Login failed:', err)
-    error.value = err.response?.data?.message || 'Invalid email or password'
+    error.value = err.response?.data?.message || 'Registration failed'
+  } finally {
+    loading.value = false
   }
-}
-
-const fillDemo = (role) => {
-  form.value.email = `${role}@airport.com`
-  form.value.password = 'password'
-  error.value = ''
 }
 </script>
 
 <style scoped>
+/* Reuse same styles as Login.vue */
 .login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px;
+  padding: 20px;
 }
 
 .login-card {
@@ -132,7 +158,7 @@ const fillDemo = (role) => {
 
 .login-image {
   position: relative;
-  min-height: 500px;
+  min-height: 600px;
 }
 
 .login-image img {
@@ -160,11 +186,6 @@ const fillDemo = (role) => {
   font-weight: 700;
 }
 
-.image-overlay p {
-  font-size: 18px;
-  opacity: 0.9;
-}
-
 .login-form {
   padding: 60px 50px;
   display: flex;
@@ -173,18 +194,13 @@ const fillDemo = (role) => {
 }
 
 .form-header {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .form-header h2 {
   font-size: 28px;
   margin-bottom: 8px;
   color: #2c3e50;
-}
-
-.form-header p {
-  color: #7f8c8d;
-  font-size: 16px;
 }
 
 .btn-login {
@@ -206,21 +222,6 @@ const fillDemo = (role) => {
   box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
-.btn-login:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.spinner-small {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
 .error-message {
   background: #fee;
   color: #c33;
@@ -230,75 +231,13 @@ const fillDemo = (role) => {
   font-size: 14px;
 }
 
-.divider {
-  text-align: center;
-  margin: 30px 0;
-  position: relative;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 40%;
-  height: 1px;
-  background: #e0e0e0;
-}
-
-.divider::before {
-  left: 0;
-}
-
-.divider::after {
-  right: 0;
-}
-
-.divider span {
-  background: white;
-  padding: 0 15px;
-  color: #7f8c8d;
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
   font-size: 14px;
-}
-
-.demo-accounts {
-  display: grid;
-  gap: 12px;
-}
-
-.demo-btn {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: left;
-}
-
-.demo-btn:hover {
-  border-color: #667eea;
-  transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-}
-
-.demo-icon {
-  font-size: 32px;
-}
-
-.demo-btn strong {
-  display: block;
-  color: #2c3e50;
-  font-size: 15px;
-  margin-bottom: 3px;
-}
-
-.demo-btn small {
-  color: #7f8c8d;
-  font-size: 13px;
 }
 
 .register-link {
@@ -314,10 +253,6 @@ const fillDemo = (role) => {
   text-decoration: none;
 }
 
-.register-link a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 768px) {
   .login-card {
     grid-template-columns: 1fr;
@@ -325,10 +260,6 @@ const fillDemo = (role) => {
 
   .login-image {
     display: none;
-  }
-
-  .login-form {
-    padding: 40px 30px;
   }
 }
 </style>

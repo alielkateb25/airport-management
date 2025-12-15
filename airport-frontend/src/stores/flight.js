@@ -1,98 +1,113 @@
 import { defineStore } from 'pinia'
+import { ref } from 'vue'
 import axios from '../api/axios'
 
-export const useFlightStore = defineStore('flight', {
-  state: () => ({
-    flights: [],
-    currentFlight: null,
-    loading: false,
-    error: null,
-    pagination: {
-      current_page: 1,
-      last_page: 1,
-      total: 0,
-    },
-  }),
+export const useFlightStore = defineStore('flight', () => {
+  const flights = ref([])
+  const currentFlight = ref(null)
+  const loading = ref(false)
+  const error = ref(null)
+  const pagination = ref({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+  })
 
-  actions: {
-    async fetchFlights(params = {}) {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await axios.get('/flights', { params })
-        this.flights = response.data.data
-        this.pagination = {
-          current_page: response.data.current_page,
-          last_page: response.data.last_page,
-          total: response.data.total,
-        }
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to fetch flights'
-        throw error
-      } finally {
-        this.loading = false
+  const fetchFlights = async (params = {}) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await axios.get('/flights', { params })
+      flights.value = response.data.data
+      pagination.value = {
+        current_page: response.data.current_page,
+        last_page: response.data.last_page,
+        total: response.data.total,
       }
-    },
+      console.log('Fetched flights:', flights.value)
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to fetch flights'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async searchFlights(searchParams) {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await axios.get('/agent/flights/search', { params: searchParams })
-        return response.data
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to search flights'
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
+  const searchFlights = async (searchParams) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await axios.get('/agent/flights/search', { params: searchParams })
+      console.log('Searched flights:', response.data)
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to search flights'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async createFlight(flightData) {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await axios.post('/staff/flights', flightData)
-        return response.data
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to create flight'
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
+  const createFlight = async (flightData) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await axios.post('/admin/flights', flightData)
+      flights.value.unshift(response.data.flight)
+      console.log('Created flight:', response.data.flight)
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to create flight'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async updateFlight(id, flightData) {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await axios.put(`/staff/flights/${id}`, flightData)
-        return response.data
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to update flight'
-        throw error
-      } finally {
-        this.loading = false
+  const updateFlight = async (id, flightData) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await axios.put(`/admin/flights/${id}`, flightData)
+      const index = flights.value.findIndex(f => f.id === id)
+      if (index !== -1) {
+        flights.value[index] = response.data.flight
       }
-    },
+      console.log('Updated flight:', response.data.flight)
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to update flight'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
-    async deleteFlight(id) {
-      this.loading = true
-      this.error = null
-      
-      try {
-        await axios.delete(`/staff/flights/${id}`)
-        this.flights = this.flights.filter(f => f.id !== id)
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Failed to delete flight'
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-  },
+  const deleteFlight = async (id) => {
+    loading.value = true
+    error.value = null
+    try {
+      await axios.delete(`/admin/flights/${id}`)
+      flights.value = flights.value.filter(f => f.id !== id)
+      console.log('Deleted flight with id:', id)
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to delete flight'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    flights,
+    currentFlight,
+    loading,
+    error,
+    pagination,
+    fetchFlights,
+    searchFlights,
+    createFlight,
+    updateFlight,
+    deleteFlight,
+  }
 })

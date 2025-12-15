@@ -120,7 +120,42 @@
   </div>
 </template>
 
+
+
 <script setup>
+  import { ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useBookingStore } from '../../stores/booking'
+  
+  const router = useRouter()
+  const bookingStore = useBookingStore()
+  
+  const form = ref({
+    passenger_id: '',
+    flight_id: '',
+    seat_number: '',
+    class: 'economy',
+    total_price: 0
+  })
+  
+  const error = ref(null)
+  const submitting = ref(false)
+  
+  const handleSubmit = async () => {
+    submitting.value = true
+    error.value = null
+    
+    try {
+      await bookingStore.createBooking(form.value)
+      router.push('/agent/my-bookings')
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Failed to create booking'
+    } finally {
+      submitting.value = false
+    }
+  }
+</script>
+<!-- <script setup>
 import { ref } from 'vue'
 import { useFlightStore } from '../../stores/flight'
 
@@ -159,41 +194,4 @@ const formatTime = (datetime) => {
     minute: '2-digit' 
   })
 }
-</script>
-```
-
-
-
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useBookingStore } from '../../stores/booking'
-
-const router = useRouter()
-const bookingStore = useBookingStore()
-
-const form = ref({
-  passenger_id: '',
-  flight_id: '',
-  seat_number: '',
-  class: 'economy',
-  total_price: 0
-})
-
-const error = ref(null)
-const submitting = ref(false)
-
-const handleSubmit = async () => {
-  submitting.value = true
-  error.value = null
-  
-  try {
-    await bookingStore.createBooking(form.value)
-    router.push('/agent/my-bookings')
-  } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to create booking'
-  } finally {
-    submitting.value = false
-  }
-}
-</script>
+</script> -->

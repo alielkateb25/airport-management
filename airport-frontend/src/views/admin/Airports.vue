@@ -1,29 +1,27 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">Manage Airports</h1>
-      <button 
-        @click="openCreateModal"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-      >
-        + Add Airport
+    <div class="page-header">
+      <h2 class="page-title">Airports Management</h2>
+      <button @click="openCreateModal" class="btn btn-primary">
+        <span>+</span>
+        Add Airport
       </button>
     </div>
 
-    <!-- Search -->
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex gap-4">
+    <!-- Search and Filters -->
+    <div class="card filter-card">
+      <div class="filter-grid">
         <input 
           v-model="searchQuery"
           @input="handleSearch"
           type="text"
-          placeholder="Search airports..."
-          class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search airports by name, code, city..."
+          class="form-control"
         />
         <select 
           v-model="statusFilter"
           @change="handleSearch"
-          class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="form-control"
         >
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -33,159 +31,135 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="airportStore.loading" class="text-center py-12">
-      <div class="text-gray-600">Loading airports...</div>
+    <div v-if="globalDataStore.loading.airports" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading airports...</p>
     </div>
 
     <!-- Airports Table -->
-    <div v-else class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div v-else class="table-container">
+      <table>
+        <thead>
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th>Code</th>
+            <th>Airport Name</th>
+            <th>City</th>
+            <th>Country</th>
+            <th>Timezone</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="airport in airportStore.airports" :key="airport.id" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-              {{ airport.code }}
+        <tbody>
+          <tr v-for="airport in filteredAirports" :key="airport.id">
+            <td>
+              <span class="code-badge">{{ airport.code }}</span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ airport.name }}
+            <td>
+              <strong>{{ airport.name }}</strong>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {{ airport.city }}
+            <td>{{ airport.city }}</td>
+            <td>{{ airport.country }}</td>
+            <td>
+              <small class="text-muted">{{ airport.timezone }}</small>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {{ airport.country }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span 
-                :class="airport.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                class="px-2 py-1 text-xs font-semibold rounded-full"
-              >
+            <td>
+              <span class="badge" :class="airport.status === 'active' ? 'badge-success' : 'badge-danger'">
                 {{ airport.status }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-              <button 
-                @click="openEditModal(airport)"
-                class="text-blue-600 hover:text-blue-900"
-              >
-                Edit
-              </button>
-              <button 
-                @click="deleteAirport(airport.id)"
-                class="text-red-600 hover:text-red-900"
-              >
-                Delete
-              </button>
+            <td>
+              <div class="action-buttons">
+                <button @click="openEditModal(airport)" class="btn-icon btn-edit" title="Edit">
+                  ✏️
+                </button>
+                <button @click="handleDeleteAirport(airport.id)" class="btn-icon btn-delete" title="Delete">
+                  🗑️
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
 
       <!-- Empty State -->
-      <div v-if="airportStore.airports.length === 0" class="text-center py-12">
-        <p class="text-gray-600">No airports found.</p>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="airportStore.pagination.last_page > 1" class="mt-6 flex justify-center">
-      <div class="flex gap-2">
-        <button 
-          v-for="page in airportStore.pagination.last_page" 
-          :key="page"
-          @click="changePage(page)"
-          :class="page === airportStore.pagination.current_page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'"
-          class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-        >
-          {{ page }}
-        </button>
+      <div v-if="filteredAirports.length === 0" class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <p>No airports found</p>
+        <button @click="openCreateModal" class="btn btn-primary">Add First Airport</button>
       </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-        <h2 class="text-2xl font-bold mb-6">{{ isEditing ? 'Edit Airport' : 'Add New Airport' }}</h2>
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>{{ isEditing ? 'Edit Airport' : 'Add New Airport' }}</h2>
+          <button @click="closeModal" class="close-btn">✕</button>
+        </div>
         
         <form @submit.prevent="handleSubmit">
-          <div class="space-y-4">
-            <!-- Code -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">Airport Code (IATA)</label>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Airport Code (IATA) *</label>
               <input 
                 v-model="form.code"
                 type="text"
                 maxlength="3"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
-                placeholder="JFK"
+                class="form-control"
+                placeholder="e.g., JFK"
                 required
+                @input="form.code = form.code.toUpperCase()"
               />
+              <small class="form-hint">3-letter airport code</small>
             </div>
 
-            <!-- Name -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">Airport Name</label>
+            <div class="form-group full-width">
+              <label class="form-label">Airport Name *</label>
               <input 
                 v-model="form.name"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="John F. Kennedy International Airport"
+                class="form-control"
+                placeholder="e.g., John F. Kennedy International Airport"
                 required
               />
             </div>
 
-            <!-- City -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">City</label>
+            <div class="form-group">
+              <label class="form-label">City *</label>
               <input 
                 v-model="form.city"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="New York"
+                class="form-control"
+                placeholder="e.g., New York"
                 required
               />
             </div>
 
-            <!-- Country -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">Country</label>
+            <div class="form-group">
+              <label class="form-label">Country *</label>
               <input 
                 v-model="form.country"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="USA"
+                class="form-control"
+                placeholder="e.g., USA"
                 required
               />
             </div>
 
-            <!-- Timezone -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">Timezone</label>
+            <div class="form-group">
+              <label class="form-label">Timezone</label>
               <input 
                 v-model="form.timezone"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="America/New_York"
+                class="form-control"
+                placeholder="e.g., America/New_York"
               />
             </div>
 
-            <!-- Status -->
-            <div>
-              <label class="block text-gray-700 font-semibold mb-2">Status</label>
-              <select 
-                v-model="form.status"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
+            <div class="form-group">
+              <label class="form-label">Status *</label>
+              <select v-model="form.status" class="form-control" required>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
@@ -193,25 +167,18 @@
           </div>
 
           <!-- Error Message -->
-          <div v-if="error" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+          <div v-if="error" class="alert alert-error">
             {{ error }}
           </div>
 
           <!-- Buttons -->
-          <div class="flex gap-4 mt-6">
-            <button 
-              type="submit"
-              :disabled="submitting"
-              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition disabled:bg-gray-400"
-            >
-              {{ submitting ? 'Saving...' : (isEditing ? 'Update' : 'Create') }}
-            </button>
-            <button 
-              type="button"
-              @click="closeModal"
-              class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 rounded-lg font-semibold transition"
-            >
+          <div class="modal-footer">
+            <button type="button" @click="closeModal" class="btn btn-secondary">
               Cancel
+            </button>
+            <button type="submit" :disabled="submitting" class="btn btn-primary">
+              <span v-if="submitting" class="spinner-small"></span>
+              <span v-else>{{ isEditing ? 'Update Airport' : 'Create Airport' }}</span>
             </button>
           </div>
         </form>
@@ -221,18 +188,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAirportStore } from '../../stores/airport'
+import { ref, computed } from 'vue'
+import { useGlobalDataStore } from '../../stores/globalData'
+import axios from '../../api/axios'
 
-const airportStore = useAirportStore()
+const globalDataStore = useGlobalDataStore()
 
 const showModal = ref(false)
 const isEditing = ref(false)
 const currentAirportId = ref(null)
 const searchQuery = ref('')
 const statusFilter = ref('')
-const error = ref(null)
 const submitting = ref(false)
+const error = ref(null)
 
 const form = ref({
   code: '',
@@ -243,31 +211,32 @@ const form = ref({
   status: 'active'
 })
 
-onMounted(() => {
-  fetchAirports()
+// Computed filtered airports based on search and filters
+const filteredAirports = computed(() => {
+  let airports = [...globalDataStore.airports]
+  
+  // Apply search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    airports = airports.filter(airport => 
+      airport.code.toLowerCase().includes(query) ||
+      airport.name.toLowerCase().includes(query) ||
+      airport.city.toLowerCase().includes(query) ||
+      airport.country.toLowerCase().includes(query)
+    )
+  }
+  
+  // Apply status filter
+  if (statusFilter.value) {
+    airports = airports.filter(airport => airport.status === statusFilter.value)
+  }
+  
+  return airports
 })
 
-const fetchAirports = async () => {
-  try {
-    await airportStore.fetchAirports({
-      search: searchQuery.value,
-      status: statusFilter.value
-    })
-  } catch (err) {
-    console.error('Failed to fetch airports:', err)
-  }
-}
-
 const handleSearch = () => {
-  fetchAirports()
-}
-
-const changePage = (page) => {
-  airportStore.fetchAirports({
-    page,
-    search: searchQuery.value,
-    status: statusFilter.value
-  })
+  // Filtering is handled by computed property
+  console.log('Filtered airports:', filteredAirports.value.length)
 }
 
 const openCreateModal = () => {
@@ -304,26 +273,369 @@ const handleSubmit = async () => {
   
   try {
     if (isEditing.value) {
-      await airportStore.updateAirport(currentAirportId.value, form.value)
+      // Update existing airport
+      const response = await axios.put(`/admin/airports/${currentAirportId.value}`, form.value)
+      
+      // Update in global store
+      globalDataStore.updateItem('airports', currentAirportId.value, response.data.data || form.value)
+      
+      console.log('Airport updated:', response.data)
     } else {
-      await airportStore.createAirport(form.value)
+      // Create new airport
+      const response = await axios.post('/admin/airports', form.value)
+      
+      // Add to global store
+      globalDataStore.addItem('airports', response.data.data || { ...form.value, id: Date.now() })
+      
+      console.log('Airport created:', response.data)
     }
+    
     closeModal()
-    fetchAirports()
   } catch (err) {
     error.value = err.response?.data?.message || 'Failed to save airport'
+    if (err.response?.data?.errors) {
+      const errors = Object.values(err.response.data.errors).flat()
+      error.value = errors.join(', ')
+    }
+    console.error('Submit error:', err)
   } finally {
     submitting.value = false
   }
 }
 
-const deleteAirport = async (id) => {
-  if (!confirm('Are you sure you want to delete this airport?')) return
+const handleDeleteAirport = async (id) => {
+  if (!confirm('Are you sure you want to delete this airport? This action cannot be undone.')) return
   
   try {
-    await airportStore.deleteAirport(id)
+    await axios.delete(`/admin/airports/${id}`)
+    
+    // Remove from global store
+    globalDataStore.removeItem('airports', id)
+    
+    console.log('Airport deleted:', id)
   } catch (err) {
     alert(err.response?.data?.message || 'Failed to delete airport')
+    console.error('Delete error:', err)
   }
 }
 </script>
+
+<style scoped>
+/* All the same styles as before */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.filter-card {
+  margin-bottom: 24px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 20px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.code-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.text-muted {
+  color: #7f8c8d;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-edit {
+  background: #e3f2fd;
+}
+
+.btn-edit:hover {
+  background: #2196f3;
+  transform: scale(1.1);
+}
+
+.btn-delete {
+  background: #ffebee;
+}
+
+.btn-delete:hover {
+  background: #f44336;
+  transform: scale(1.1);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #2c3e50;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: #e0e0e0;
+  transform: rotate(90deg);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.form-control {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.alert-error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f8f9fa;
+}
+
+th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  padding: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
