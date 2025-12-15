@@ -392,6 +392,16 @@ If you discover a bug, please create an issue with:
 
 ---
 
+## Future Steps
+
+This project isn't 100% complete so there are steps to do :
+- build the Staff Dashboard
+- build the Agent Dashboard
+- Make HomePage
+- Test & see if everything works accordingly
+
+---
+
 ## 👨‍💻 Author
 
 **Your Name**
